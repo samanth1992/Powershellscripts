@@ -1,0 +1,31 @@
+Select-AzSubscription -SubscriptionId 940a2f1d-08fd-4ddf-b4d0-c984de7a8f5c
+$VMs = Get-AzVM | select Name,ResourceGroupName,Location
+
+foreach ($VM in $VMs) {
+$vmname = $vm.Name
+$VmNic = (Get-AzVM -ResourceGroupName $VM.ResourceGroupName -Name $Vm.Name)
+$NifName = ($VmNic.NetworkProfile[0].NetworkInterfaces.Id).Split('/') | Select-Object -Last 1
+$MyInterface = (Get-AzNetworkInterface -Name $NifName -ResourceGroupName $VmNic.ResourceGroupName).IpConfigurations
+$PrivateIP = $MyInterface.privateipaddress
+$Osdisk = (Get-AzVM -ResourceGroupName $vm.ResourceGroupName -Name $vm.Name).StorageProfile.OsDisk.Name
+$Osdisksize  = (Get-AzVM -ResourceGroupName $vm.ResourceGroupName -Name $vm.Name).StorageProfile.OsDisk.DiskSizeGB
+$datadisks = (Get-AzVM -ResourceGroupName $vm.ResourceGroupName -Name $vm.Name).StorageProfile.DataDisks.Name -join ","
+$OS = (Get-AzVM -ResourceGroupName $VM.ResourceGroupName -Name $Vm.Name).StorageProfile.ImageReference.Offer
+$Version = (Get-AzVM -ResourceGroupName $VM.ResourceGroupName -Name $Vm.Name).StorageProfile.ImageReference.Sku
+$Size = (Get-AzVM -ResourceGroupName $VM.ResourceGroupName -Name $Vm.Name).HardwareProfile.VmSize
+
+$Output =New-Object -TypeName PSObject -Property @{
+                     "Name" = $vm.name    
+                    "ResourceGroup" = $vm.ResourceGroupName               
+                    "size"= $Size
+                    "Os" = $OS                     
+                    "Version" = $Version
+                    "Osdisk" = $Osdisk
+                    "Osdisksize"= $Osdisksize 
+                    "Datadisks" = $datadisks 
+                    "PrivateIp"= $MyInterface.privateipaddress
+                    }|Select Name,ResourceGroup,Size,OS,Version,Osdisk,Osdisksize,PrivateIp,datadisks
+ 
+$Output | Export-Csv .\test.csv -Append
+}
+ 
