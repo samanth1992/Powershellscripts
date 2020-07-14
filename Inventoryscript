@@ -1,4 +1,4 @@
-Select-AzSubscription -SubscriptionId 940a2f1d-08fd-4ddf-b4d0-c984de7a8f5c
+
 $VMs = Get-AzVM | select Name,ResourceGroupName,Location
 
 foreach ($VM in $VMs) {
