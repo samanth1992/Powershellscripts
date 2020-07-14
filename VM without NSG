@@ -1,0 +1,30 @@
+
+    $vms = Get-AzVM | Select-Object ResourceGroupName, Name, NetworkProfile
+        foreach ($vm in $vms) {
+            $vmNetworkInterfacesIds = $vm.NetworkProfile.networkInterfaces.id
+            foreach ($vmNetworkInterfaceId in $vmNetworkInterfacesIds) 
+            {
+                $vmNetworkInterfaceObject = Get-AzResource -id $vmNetworkInterfaceId | Get-AzNetworkInterface
+                $vmNetworkInterfaceSubnet = $vmNetworkInterfaceObject.IpConfigurations.subnet.Id
+                $vmNsgAssigned = $vmNetworkInterfaceObject.NetworkSecurityGroupText
+                $vmNetworkInterfaceVnetName = $vmNetworkInterfaceSubnet.Split("/")[8] 
+                $vmNetworkInterfaceSubnetName = $vmNetworkInterfaceSubnet.Split("/")[-1] 
+                $vmVnetResourceGroup = $vmNetworkInterfaceSubnet.Split("/")[4]
+                $vnetObject = Get-AzVirtualNetwork -Name $vmNetworkInterfaceVnetName -ResourceGroupName $vmVnetResourceGroup
+                $subnetObject = Get-AzVirtualNetworkSubnetConfig -Name $vmNetworkInterfaceSubnetName -VirtualNetwork $vnetObject
+                if ($vmNsgAssigned -eq "null" -and !$subnetObject.NetworkSecurityGroup.Id)
+                 {
+ 
+                    $vmObject = New-Object PSObject -Property ([ordered]@{ 
+                            "Virtual Machine Name" = $vm.Name
+                            "Resource Group Name"  = $vm.ResourceGroupName
+                            "Subnet"               = $vmNetworkInterfaceSubnetName
+                            "Virtual Network"      = $vmNetworkInterfaceVnetName
+                        })
+                  
+                    $vmsMissingNSG += $vmObject
+                }
+               
+Write-Output "Virtual machines with missing NSG: $($vmsMissingNSG.Count)"
+$vmsMissingNSG | Export-Csv D:\Alshaya\vmnonsg.csv
+}}
